@@ -1,0 +1,38 @@
+README for TJFC-separated-smear
+
+This is a version of the TJFC code designed to smear the signal and the 
+background with their own systematic errors, and it also has the capability 
+to maintain a minimum expected number of events independent of the signal 
+and background components, used for uncertainty purposes.
+
+I have decided, in order to keep the code simple, to remove the profile 
+likelihood code from this version.  The profile likelihood code was (as of 
+07-13-10) last really updated in the base TJFC class.  All the other 
+variations are based on the non-Profile-Likelihood method.
+
+The smear method is easier to understand than profile likelihood, so that's 
+what I'm trying to implement for the T2K 1st summer analysis.
+
+As always, this only works for a single bin, so forget multi-bin fits!
+
+This method should be equivalent to what the MINOS group did for their 
+nue appearance analysis except:
+
+I'm using a full Poisson likelihood ratio, instead of a smaller one which is 
+derived by using Sterling's approximation.  I did this because Sterling's 
+approximation is not valid at small integers.
+
+The MINOS group (at least Ochoa's thesis) assumed that the minimum possible 
+number of expected events would come from the theta13 = 0 position on the 
+dcp-q13 plot.  This is not necessarily true.
+
+The MINOS group calculated, rather than a likelihood ratio, a 
+delta-chi-square-critical, and used that to determine which values of n 
+would be allowed in the 90% CL region.  This is exactly equivalent to the 
+smearing method used.
+
+The delta-chi-square-critical, rather than being calculated using a smeared 
+Poisson distribution, is actually calculated through MC methods.  I prefer the 
+numerical calculation of a smeared poissson likelihood, because it is faster 
+computationally and less susciptible to fluctuations.  On the downside, it is 
+a bit harder to explain to people.

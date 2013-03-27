@@ -1,0 +1,228 @@
+# Adopted from Super-Kamiokande files
+# I'm not sure what in here makes it work, but something does.
+# Sorry for all the other stuff left over.
+
+#
+#  check ROOTSYS
+#
+ifndef ROOTSYS
+   TMP := $(shell echo " ========================================= " 1>&2 )
+   TMP := $(shell echo "         ERROR: set ROOTSYS                " 1>&2 )
+   TMP := $(shell echo " ========================================= " 1>&2 )
+   THIS_MUST_CRASH
+endif
+
+ROOTCFLAGS   := $(shell $(ROOTSYS)/bin/root-config --cflags) 
+ROOTLIBS     := $(shell $(ROOTSYS)/bin/root-config --glibs) -lTreePlayer
+ROOTLIBDIR   := $(shell $(ROOTSYS)/bin/root-config --libdir)
+
+
+#
+#  System name
+#
+SYSTEM := $(shell uname -s)
+
+#
+#  Hardware platform
+#
+PLATFORM := $(shell uname -p)
+
+#
+#  Compiler setting
+#
+#   select among the followings if you want to set by hand 
+#
+#      UseG77 := true
+#      UseGFORTRAN := true
+#      UseIFORT := true
+#
+#      UseGCC34 := true
+#      UseGCC := true
+#      UseGCC4 := true
+#      UseICC := true
+#      UseAbsoft := true
+#
+UseG77 := true
+UseGCC := true
+
+######################################################################
+#
+#  Site libraries
+#
+
+SITE_LDOPTIONS = -L$(LIBDIR) -L$(A_LIBDIR)
+SITE_DEFINES   = -DSITE_HAS_RFA
+SITE_INCLUDES  = $(LOCAL_INC) -I$(CERN_ROOT)/include -I$(CERN_ROOT)/include/cfortran $(ROOTCFLAGS)
+SITE_LIBRARIES = -lrfa  -lnsl -lm
+SITE_LDLIBS = 
+ALLDEFINES = 
+OBJFJT =
+
+#For Darwin/OSX
+ifeq ($(strip $(SYSTEM)),Darwin) 
+ SITE_LDOPTIONS += -Wl,-search_paths_first
+endif
+
+# for kamioka sukap 64bit linux machine
+ifdef KAMIOKA_SUKAP64
+  SITE_HAS_REAL_RFA := true
+  SITE_LDOPTIONS += -Wl,-z -Wl,muldefs
+  SITE_INCLUDES  += -I/opt/FJSVrdass/include
+  SITE_LIBRARIES += -L/opt/FJSVrdass/lib -lrfa -lsupc++ -L/opt/intel/cce/10.0.023/lib -lirc
+  OBJFJT = $(SKOFL_OBJDIR)/cfclos.o $(SKOFL_OBJDIR)/cfget.o $(SKOFL_OBJDIR)/cfopei.o $(SKOFL_OBJDIR)/cfput.o  
+endif
+
+# for Linux, x86_64
+ifeq ($(strip $(SYSTEM)),Linux) 
+  ifeq ($(strip $(PLATFORM)),x86_64) 
+    SITE_LDLIBS += /usr/lib64/libg2c.so.0  
+  endif
+endif
+
+# for CERNLIB, etc.
+CLIB = `cernlib geant321 graflib grafX11 packlib mathlib kernlib lapack3 blas`
+
+
+ifeq ($(strip $(SYSTEM)),Linux) 
+  ALLDEFINES = -Dlinux -D__linux__
+endif
+
+ifeq ($(strip $(SYSTEM)),SunOS) 
+  ALLDEFINES = -Dsun -DSolaris
+endif
+
+##########################################################################
+### for sample programs
+##########################################################################
+LDOPTS	= $(SITE_LDOPTIONS)
+
+## some sample programs require $(LIBS) $(LIBS) on sukapXXX 
+## may be the order isn't optimized.. y.takeuchi (02-JAN-2009)
+LDLIBS	=  $(LDOPTS) $(OBJFJT) $(LOCAL_LIBS) $(LIBS) $(LIBS) $(CLIB) $(ROOTLIBS) \
+	   $(SITE_LIBRARIES) $(FORTRANLIBRARIES) $(SITE_LDLIBS)
+
+
+######################################################################
+#
+#  C++ Compiler setting
+#
+
+ifdef UseGCC34
+CXX = g++34
+CXXDEBUGFLAGS = -g -O
+CXXOPTIONS = -fPIC
+endif
+
+ifdef UseGCC
+CXX = g++
+CXXDEBUGFLAGS = -g -O
+CXXOPTIONS = -fPIC
+endif
+
+ifdef UseGCC4
+CXX = g++
+CXXDEBUGFLAGS = -g -O
+CXXOPTIONS = -fPIC
+endif
+
+ifdef UseICC
+CXX = icc
+CXXDEBUGFLAGS = -O2
+CXXOPTIONS = -ansi -mp -no-gcc -w1 -fPIC
+endif
+
+CXXDEFINES = $(ALLDEFINES) $(SITE_DEFINES)
+CXXINCLUDES = $(SITE_INCLUDES) -I. -I$(SKOFL_INCDIR) -I$(SKOFL_INCDIR)/skonl -I$(SKOFL_INCDIR)/lowe -I$(A_INCDIR) 
+CXXFLAGS =  $(CXXDEBUGFLAGS) $(CXXOPTIONS) $(CXXINCLUDES) $(CXXDEFINES)
+
+
+
+######################################################################
+#
+#  variable setting
+#
+
+SHELL   = /bin/sh
+AR      = ar clq
+CPP     = /lib/cpp
+MKDIR   = mkdir -p
+SED     = sed
+TOUCH   = touch
+RANLIB  = ranlib
+MV      = mv
+LN      = ln -s
+CP      = cp
+MAKE    = /usr/bin/gmake
+
+# The yacc command
+YACC	= bison -y
+YACCLIB	=
+CCYACC	= bison -y
+
+# The lex command.
+LEX	= flex -l
+LEXLIB	= -lfl
+
+
+INSTALL     = $(SHELL) $(CONFIGDIR)/install-sh
+INSTALL_BIN = $(INSTALL) -c -m 0755
+INSTALL_LIB = $(INSTALL) -c -m 0644
+INSTALL_INC = $(INSTALL) -c -m 0444
+INSTALL_DAT = $(INSTALL) -c -m 0444
+INSTALL_MAN = $(INSTALL) -c -m 0444
+
+FH2H    = $(CONFIGDIR)/fh2h.pl
+
+### ROOT macro (.C) is moved to the lowest priority
+.SUFFIXES:
+.SUFFIXES: .o .f .F .cxx .cc .c .cpp .so .h .C .l
+
+.f.o :
+	$(RM) $@
+	$(FC) -c $(FCFLAGS) -o $@ $(CURDIR)/$< 
+
+.F.o :
+	$(RM) $@
+	$(FC) -c $(FCFLAGS) -o $@ $(CURDIR)/$< 
+
+.c.o :
+	$(RM) $@
+	$(CC) -c $(CFLAGS) -o $@ $(CURDIR)/$< 
+
+.cc.o :
+	$(RM) $@
+	$(CXX) -c $(CXXFLAGS) -o $@ $(CURDIR)/$< 
+
+.cpp.o :
+	$(RM) $@
+	$(CXX) -c $(CXXFLAGS) -o $@ $(CURDIR)/$< 
+
+.C.o :
+	$(RM) $@
+	$(CXX) -c $(CXXFLAGS) -o $@ $(CURDIR)/$< 
+
+.cxx.o :
+	$(RM) $@
+	$(CXX) -c $(CXXFLAGS) -o $@ $(CURDIR)/$< 
+
+### for sample programs
+.F:
+	$(RM) $@.o $@
+	$(FC)  $(FCFLAGS)  -c  $(CURDIR)/$<
+	LD_RUN_PATH=$(SKOFL_LIBDIR):$(A_LIBDIR) $(CXX) $(CXXFLAGS) -o $* $*.o $(LDLIBS) 
+
+.cc:
+	$(RM) $@.o $@
+	$(CXX) $(CXXFLAGS) -c  $(CURDIR)/$< 
+	LD_RUN_PATH=$(SKOFL_LIBDIR):$(A_LIBDIR) $(CXX) $(CXXFLAGS) -o $* $*.o $(LDLIBS) 
+
+.c:
+	$(RM) $@.o $@
+	$(CC) $(CFLAGS) -c  $(CURDIR)/$< 
+	LD_RUN_PATH=$(SKOFL_LIBDIR):$(A_LIBDIR) $(CC) $(CFLAGS) -o $* $*.o $(LDLIBS) 
+
+.o:
+	LD_RUN_PATH=$(SKOFL_LIBDIR):$(A_LIBDIR) $(CXX) $(CXXFLAGS) -o $* $*.o $(LDLIBS) 
+
+
+ _NULLCMD_ = @ echo -n
