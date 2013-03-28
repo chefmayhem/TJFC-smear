@@ -1,3 +1,23 @@
+README for TJFC-public-smear
+
+Some physics notes to myself are below.  For use:
+
+Copy all these files to your directory.
+
+make
+make TJFC.so
+
+Good, now you have an so file.  You should now be able to start root with it,
+like:
+
+root -l TJFC.so
+
+And now you can use the TJFC class as if it were any root class.
+I'll try to update this with some example usage scripts in not too long.
+In general, the usage is very similar to that in TFeldmanCousins in root:
+http://root.cern.ch/root/html/TFeldmanCousins.html
+
+
 README for TJFC-separated-smear
 
 This is a version of the TJFC code designed to smear the signal and the 
